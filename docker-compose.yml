@@ -1,0 +1,10 @@
+# Подключает стек из backend/docker-compose.yml
+#
+# Запуск из корня:
+#   docker compose --env-file backend/.env up -d
+#
+# Рекомендуемый вариант — из каталога backend:
+#   cd backend && docker compose up -d
+
+include:
+  - path: backend/docker-compose.yml

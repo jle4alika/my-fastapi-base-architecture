@@ -1,0 +1,8 @@
+Alembic migrations for this project.
+
+Run from repository root:
+
+  make -C backend migrate
+  make -C backend revision msg="description"
+
+Import new ORM models in env.py before autogenerate.

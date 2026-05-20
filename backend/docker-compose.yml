@@ -1,0 +1,211 @@
+# Запуск из каталога backend:
+#   cd backend && docker compose up -d
+#
+# Подстановка ${VAR} в этом файле берётся из backend/.env (в каталоге compose).
+# Сервис api дополнительно получает все переменные из .env в контейнер (env_file).
+#
+# Порты на хосте:
+#   PGBOUNCER_PORT (6432) — приложения (api, consumers, локальный uvicorn)
+#   POSTGRES_PUBLISHED_PORT (5433) — только миграции/админка, минуя пулер
+#
+# Из корня репозитория:
+#   docker compose --env-file backend/.env -f docker-compose.yml config
+# (см. корневой docker-compose.yml с include)
+
+name: gloomth
+
+x-db-via-pgbouncer: &db-via-pgbouncer
+  DB_HOST: pgbouncer
+  DB_PORT: "5432"
+  DB_DIRECT_HOST: db
+  DB_DIRECT_PORT: "5432"
+  USE_PGBOUNCER: "true"
+  USE_SQLITE: "false"
+  DB_RESET_ON_LEGACY_PK: "true"
+
+services:
+  # API
+  api:
+    build: .
+    env_file:
+      - .env
+    environment:
+      <<: *db-via-pgbouncer
+      REDIS_HOST: redis_container
+      RMQ_HOST: rabbitmq
+    command: uvicorn backend.api.app:app --host 0.0.0.0 --port 8000
+    working_dir: /app
+    volumes:
+      - .:/app/backend
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
+      redis_container:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+
+  # Redis
+  redis_container:
+    image: redis:7
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 2s
+
+  # Redis GUI
+  redis_gui:
+    image: redis/redisinsight:latest
+    ports:
+      - "${REDIS_GUI_PORT:-5540}:5540"
+    environment:
+      # UI Redis Insight (не путать с хостом Redis!)
+      RI_APP_HOST: "0.0.0.0"
+      RI_APP_PORT: "5540"
+      RI_ACCEPT_TERMS_AND_CONDITIONS: "true"
+      RI_LOG_LEVEL: warn
+      # Автоподключение к redis_container в docker-сети
+      RI_REDIS_HOST: redis_container
+      RI_REDIS_PORT: "6379"
+      RI_REDIS_ALIAS: gloomth
+    volumes:
+      - redis_insight_data:/data
+    depends_on:
+      redis_container:
+        condition: service_healthy
+
+  # Database Connection
+  db:
+    image: ${POSTGRES_IMAGE:-postgres:16}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      # прямой Postgres (миграции); приложения — через PGBOUNCER_PORT
+      - "${POSTGRES_PUBLISHED_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres.conf:/etc/postgresql/postgresql.conf:ro
+      - ./pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    command:
+      [
+        "postgres",
+        "-c",
+        "config_file=/etc/postgresql/postgresql.conf",
+        "-c",
+        "hba_file=/etc/postgresql/pg_hba.conf",
+      ]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  # PgBouncer for balansing the db
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    environment:
+      # edoburu ожидает DB_PASSWORD (не DB_PASS)
+      DATABASE_URL: postgres://${DB_USER}:${DB_PASS}@db:5432/${DB_NAME}
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      AUTH_TYPE: scram-sha-256
+      POOL_MODE: ${PB_POOL_MODE:-transaction}
+      MAX_CLIENT_CONN: ${PB_MAX_CLIENTS:-100}
+      DEFAULT_POOL_SIZE: ${PB_DEFAULT_POOL_SIZE:-10}
+      # transaction pool: сброс сессии после каждой транзакции
+      SERVER_RESET_QUERY: DISCARD ALL
+      LOG_CONNECTIONS: 0
+      LOG_DISCONNECTIONS: 0
+      LISTEN_PORT: "5432"
+    ports:
+      # хост:6432 → pgbouncer:5432
+      - "${PGBOUNCER_PORT:-6432}:5432"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "PGPASSWORD=\"$$DB_PASSWORD\" psql -h 127.0.0.1 -p 5432 -U \"$$DB_USER\" -d \"$$DB_NAME\" -c 'SELECT 1' >/dev/null",
+        ]
+      interval: 3s
+      timeout: 5s
+      retries: 15
+      start_period: 5s
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    hostname: rabbitmq
+    container_name: ${RABBITMQ_CONTAINER_NAME:-rabbitmq}
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RMQ_LOGIN}
+      RABBITMQ_DEFAULT_PASS: ${RMQ_PASS}
+    ports:
+      - "${RMQ_PORT:-5672}:5672"
+      - "${RMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+  # RabbitMQ Consumers
+  consumers:
+    build: .
+    env_file:
+      - .env
+    environment:
+      <<: *db-via-pgbouncer
+      RMQ_HOST: rabbitmq
+      REDIS_HOST: redis_container
+    command: python -m backend.rabbitmq.run_all_consumers
+    working_dir: /app
+    volumes:
+      - .:/app/backend
+    depends_on:
+      db:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    restart: unless-stopped
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ${PROMETHEUS_CONTAINER_NAME:-prometheus}
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus_data/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ${GRAFANA_CONTAINER_NAME:-grafana}
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+# Data volumes
+volumes:
+  postgres_data:
+  rabbitmq-data:
+  grafana_data:
+  redis_insight_data:
