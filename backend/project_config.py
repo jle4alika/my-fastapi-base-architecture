@@ -11,6 +11,7 @@ from pathlib import Path
 from urllib.parse import quote_plus
 
 import pika
+from pydantic.v1 import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ROOT = Path(__file__).resolve().parent
@@ -29,13 +30,17 @@ def configure_logging(level: int = logging.INFO) -> None:
         handlers=[logging.StreamHandler()],
     )
 
-
 def _env_files() -> tuple[str, ...]:
     """backend/.env и при необходимости .env в корне репозитория."""
 
     paths = (_ROOT / ".env", _ROOT.parent / ".env")
     return tuple(str(p) for p in paths if p.is_file())
 
+class FastAPICacheNamespaces(BaseModel):
+    get_me: str = "me"
+    get_user: str = "get-user"
+
+    get_my_settings: str = "get-my-settings"
 
 class Settings(BaseSettings):
     """Переменные окружения API (см. backend/.env.example)."""
