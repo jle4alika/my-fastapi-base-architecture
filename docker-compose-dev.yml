@@ -1,0 +1,3 @@
+# Dev stack → backend/deploy/compose.dev.yml
+include:
+  - path: backend/deploy/compose.dev.yml

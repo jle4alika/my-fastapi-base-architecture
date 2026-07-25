@@ -1,8 +1,8 @@
-Alembic migrations for this project.
+Alembic migrations (из корня репозитория):
 
-Run from repository root:
+  make migrate
+  make revision msg="description"
+  make migrate-down
+  make current
 
-  make -C backend migrate
-  make -C backend revision msg="description"
-
-Import new ORM models in env.py before autogenerate.
+Или: poetry run alembic -c backend/alembic.ini upgrade head

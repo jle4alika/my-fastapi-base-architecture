@@ -1,22 +1,39 @@
-# Сборка: из каталога backend — `docker compose build api`
-# Импорты вида `from backend.api...` требуют PYTHONPATH=/app и дерево /app/backend/...
+# Build context = корень репозитория (см. deploy/services/app.yml).
+# Зависимости — Poetry; пакеты: backend + common/core/domains.
 
-FROM python:3.12-slim-bookworm
+FROM python:3.12-slim-bookworm AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    POETRY_VERSION=2.1.4 \
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_VIRTUALENVS_CREATE=true \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
+
+RUN pip install --no-cache-dir "poetry==${POETRY_VERSION}"
 
 WORKDIR /app
 
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r /tmp/requirements.txt
+COPY pyproject.toml poetry.lock ./
+COPY backend ./backend
 
-COPY . /app/backend
+RUN poetry install --only main --no-ansi --no-root \
+    && poetry install --only main --no-ansi \
+    && rm -rf "$POETRY_CACHE_DIR"
+
+
+FROM python:3.12-slim-bookworm AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
+
+COPY --from=builder /app/.venv /app/.venv
+COPY backend ./backend
 
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "backend.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]

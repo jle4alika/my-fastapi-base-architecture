@@ -1,7 +1,5 @@
 """
-Окружение Alembic: async SQLAlchemy, metadata из backend.database.db.
-
-Перед autogenerate импортируйте все ORM-модели (см. database.models).
+Окружение Alembic: async SQLAlchemy, metadata из infrastructure.postgres.
 """
 
 from __future__ import annotations
@@ -14,8 +12,9 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from backend.database.db import Base, get_database_url
-from backend.database.models import User  # noqa: F401 — регистрация в metadata
+from infrastructure.postgres.base import Base
+from infrastructure.postgres.engine import get_database_url
+from domains.users.infrastructure.models import UserModel  # noqa: F401 — metadata
 
 config = context.config
 
@@ -59,7 +58,7 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    """Миграции через async engine (asyncpg / aiosqlite)."""
+    """Миграции через async engine (asyncpg)."""
 
     section = config.get_section(config.config_ini_section) or {}
     section["sqlalchemy.url"] = get_database_url()

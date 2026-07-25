@@ -1,79 +1,98 @@
 # FastAPI Architecture Template
 
-Шаблон backend API: **FastAPI**, **fastapi-users**, **SQLAlchemy 2 async**, **Redis**, **RabbitMQ**.
+Шаблон backend API: **FastAPI**, **fastapi-users**, **SQLAlchemy 2 async**, **Redis**, **RabbitMQ**, **Celery**.  
+Зависимости — **Poetry**.
 
-Документация fastapi-users: [Configuration Overview](https://fastapi-users.github.io/fastapi-users/10.1/configuration/overview/)  
-В проекте установлена **v13** (совместимость с Pydantic v2 / email-validator ≥ 2); API роутеров совпадает с документацией 10.x.
+> **Новые ручки / домен:** читай [`docs/ADDING_A_FEATURE.md`](../docs/ADDING_A_FEATURE.md)  
+> Кратко по слоям: [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md)  
+> Эталон в коде: `domains/users` + `presentation/v1/users`
 
-## Быстрый старт (SQLite, без Docker)
+## Установка
 
 ```bash
-cd backend
-cp .env.example .env
-
-cd ..
-make -C backend migrate
-PYTHONPATH=. USE_SQLITE=true uvicorn backend.api.app:app --reload --port 8000
+cp backend/.env.example backend/.env
+poetry install          # или: make install-dev
 ```
 
-## Миграции (Alembic)
+Импорты `backend.api…`, `common…`, `core…`, `domains…`, `infrastructure…`, `presentation…` работают через Poetry-пакеты.
 
-Конфиг: `backend/alembic.ini`, скрипты: `backend/alembic/versions/`.
+## Быстрый старт
+
+```bash
+make infra
+make migrate
+poetry run uvicorn backend.api.app:app --reload --port 8000
+```
+
+## Как спроектировать новую фичу (кратко)
+
+```text
+1. domain/entity + методы
+2. application: ports + service + 1–2 response DTO
+3. infrastructure: ORM + repository + uow
+4. presentation/v1/<name>/routers.py + dependencies.py
+5. include в presentation/v1/router.py
+6. миграция + тесты
+```
+
+Не плоди схемы «на вырост»: DTO только под реальный JSON ручки.  
+Auth fastapi-users — отдельные `*Create/*Update/*Read` в infrastructure ACL.
+
+## Миграции
 
 | Команда | Действие |
 |---------|----------|
-| `make -C backend migrate` | `alembic upgrade head` |
-| `make -C backend revision msg="описание"` | autogenerate новой миграции |
-| `make -C backend migrate-down` | откат на 1 ревизию |
-| `make -C backend current` | текущая ревизия |
+| `make migrate` | upgrade head |
+| `make revision msg="…"` | autogenerate |
+| `make migrate-down` | откат на 1 |
 
-Для PostgreSQL: `USE_SQLITE=false` в `.env` и те же команды (URL берётся из `project_config`).
+## Аутентификация
 
-При добавлении моделей импортируйте их в `backend/alembic/env.py`, иначе autogenerate их не увидит.
+| Метод | Путь |
+|--------|------|
+| POST | `/api/v1/auth/register` |
+| POST | `/api/v1/auth/jwt/login` |
+| GET/PATCH/DELETE | `/api/v1/users/me` |
+| GET | `/api/v1/profile/me`, `/api/v1/profile/{user_id}` |
 
-Опции в `.env`:
+## Celery (опционально)
 
-- `DB_MIGRATE_ON_STARTUP=true` — `upgrade head` при старте API
-- `DB_CREATE_ALL_ON_STARTUP=true` — `create_all` без Alembic (только dev)
+По умолчанию worker в Docker **не** стартует.
 
-Swagger: http://127.0.0.1:8000/api/docs
+```bash
+make up-dev              # без Celery
+make up-dev-celery       # + celery_worker + celery_exporter
+# или в backend/.env: COMPOSE_PROFILES=celery
 
-## Аутентификация (fastapi-users)
+make celery-worker       # локальный worker на хосте
+```
 
-| Метод | Путь | Описание |
-|--------|------|----------|
-| POST | `/api/auth/register` | Регистрация |
-| POST | `/api/auth/jwt/login` | Логин (Bearer JWT) |
-| POST | `/api/auth/jwt/logout` | Выход |
-| POST | `/api/auth/cookie/login` | Логин (cookie) |
-| POST | `/api/auth/forgot-password` | Запрос сброса пароля |
-| POST | `/api/auth/reset-password` | Сброс пароля по токену |
-| POST | `/api/auth/request-verify-token` | Запрос верификации email |
-| POST | `/api/auth/verify` | Подтверждение email |
-| GET/PATCH/DELETE | `/api/users/me` | Текущий пользователь |
-| GET | `/api/users/{id}` | Пользователь по id (суперпользователь) |
+```python
+from infrastructure.celery_workers.tasks.example import ping, add
+ping.delay()
+```
 
-Дополнительно: `/api/profile/me`, `/api/profile/{user_id}`.
+Дашборд Grafana «Celery» в UI всегда; данные — после `up-*-celery`.
 
 ## Структура
 
 ```
-backend/
-  api/
-    app.py              # FastAPI + роутеры fastapi-users
-    users/              # schemas, manager, auth backends
-    routers/            # доменные ручки
-    dependencies/       # DB, current user
-  alembic/              # миграции Alembic
-  database/
-    models/user.py      # SQLAlchemy + SQLAlchemyBaseUserTableUUID
-  project_config.py     # настройки из .env
+backend/api/
+  app.py
+  presentation/v1/     # HTTP, версия API
+  domains/<feature>/   # domain | application | infrastructure
+  infrastructure/      # postgres, redis, rabbit, celery, smtp, cache
+  common/              # errors, BaseDTO
+  core/                # config, logging
+docs/
+  ADDING_A_FEATURE.md  # ← главный гайд для новых ручек
+  ARCHITECTURE.md
 ```
 
-## Docker
+## Тесты и качество
 
 ```bash
-cd backend && docker compose up -d
+make test
+make lint      # black --check + import-linter
+make format
 ```
-
-PostgreSQL + Redis — см. `docker-compose.yml` и `.env.example`.

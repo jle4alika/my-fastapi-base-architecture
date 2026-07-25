@@ -1,43 +1,43 @@
 """
-Точка входа FastAPI: lifespan, middleware, роутеры fastapi-users.
+Точка входа FastAPI: lifespan, middlewares, роутеры.
 """
 
 from __future__ import annotations
 
-import logging
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
+from fastapi import Depends, FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from backend.api.routers import main_router
-from backend.api.services.redis.rate_limiter import rate_limit_middleware, redis_lifespan
-from backend.api.users import (
-    UserCreate,
-    UserRead,
-    UserUpdate,
+from presentation.v1.router import api_v1_router
+from common.exceptions.base_handler import (
+    app_error_handler,
+    global_500_handler,
+    not_found_handler,
+)
+from common.exceptions.errors import AppError, NotFoundError
+from core.logging import configure_logging, get_logger
+from domains.users.infrastructure.auth import (
     auth_backend_cookie,
     auth_backend_jwt,
     fastapi_users,
 )
-from backend.database.schema_bootstrap import bootstrap_schema
-from backend.project_config import configure_logging, settings
-
-_MEDIA_ROOT = Path(settings.MEDIA_UPLOAD_DIR).resolve()
-_MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
-
-logger = logging.getLogger("uvicorn.error")
+from domains.users.infrastructure.auth_schemas import (
+    UserCreate,
+    UserRead,
+    UserUpdate,
+)
+from infrastructure.dependencies.rate_limiter import rate_limiter_factory
+from infrastructure.postgres.schema_bootstrap import bootstrap_schema
+from infrastructure.redis.rate_limiter import rate_limit_middleware, redis_lifespan
 
 configure_logging()
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Старт: Redis, таблицы БД. Стоп: закрытие Redis."""
-
     async with redis_lifespan(app):
         await bootstrap_schema()
         yield
@@ -52,49 +52,57 @@ app = FastAPI(
 )
 
 app.middleware("http")(rate_limit_middleware)
+app.add_exception_handler(NotFoundError, not_found_handler)
+app.add_exception_handler(AppError, app_error_handler)
+app.add_exception_handler(Exception, global_500_handler)
 
-# --- Роутеры fastapi-users (аутентификация и пользователи) ---
+
+@app.get("/health", tags=["health"])
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+API_V1_PREFIX = "/api/v1"
+
 app.include_router(
     fastapi_users.get_auth_router(auth_backend_jwt),
-    prefix="/api/auth/jwt",
+    prefix=f"{API_V1_PREFIX}/auth/jwt",
     tags=["auth"],
 )
 app.include_router(
     fastapi_users.get_auth_router(auth_backend_cookie),
-    prefix="/api/auth/cookie",
+    prefix=f"{API_V1_PREFIX}/auth/cookie",
     tags=["auth"],
 )
 app.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate),
-    prefix="/api/auth",
+    prefix=f"{API_V1_PREFIX}/auth",
     tags=["auth"],
+    dependencies=[Depends(rate_limiter_factory("register", 10, 3600))],
 )
 app.include_router(
     fastapi_users.get_reset_password_router(),
-    prefix="/api/auth",
+    prefix=f"{API_V1_PREFIX}/auth",
     tags=["auth"],
 )
 app.include_router(
     fastapi_users.get_verify_router(UserRead),
-    prefix="/api/auth",
+    prefix=f"{API_V1_PREFIX}/auth",
     tags=["auth"],
 )
 app.include_router(
     fastapi_users.get_users_router(UserRead, UserUpdate),
-    prefix="/api/users",
+    prefix=f"{API_V1_PREFIX}/users",
     tags=["users"],
 )
 
-# --- Дополнительные доменные ручки (кэш, публичный профиль) ---
-app.include_router(main_router, prefix="/api")
+app.include_router(api_v1_router, prefix=API_V1_PREFIX)
 
-app.mount(
-    "/media/files",
-    StaticFiles(directory=str(_MEDIA_ROOT)),
-    name="media_files",
-)
-
-Instrumentator().instrument(app).expose(app)
+Instrumentator(
+    should_group_status_codes=False,
+    should_ignore_untemplated=True,
+    excluded_handlers=["/metrics", "/health"],
+).instrument(app).expose(app, include_in_schema=False)
 
 
 if __name__ == "__main__":
