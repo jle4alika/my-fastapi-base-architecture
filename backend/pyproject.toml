@@ -2,7 +2,7 @@
 name = "fastapi-architecture"
 version = "0.1.0"
 description = "FastAPI template: users, SQLAlchemy async, Redis, RabbitMQ, Celery"
-readme = "backend/README.md"
+readme = "README.md"
 requires-python = ">=3.12,<3.15"
 license = { text = "MIT" }
 authors = [
@@ -53,13 +53,14 @@ dependencies = [
     "prometheus-fastapi-instrumentator (>=7.0.0)",
     "fastapi-cache2 (>=0.2.2)",
     "pyrate-limiter (>=3.7.0)",
+    "jinja2 (>=3.1.6,<4.0.0)",
 ]
 
 [project.urls]
 Homepage = "https://github.com/jle4alika/my-fastapi-base-architecture"
 Repository = "https://github.com/jle4alika/my-fastapi-base-architecture"
 Issues = "https://github.com/jle4alika/my-fastapi-base-architecture/issues"
-Changelog = "https://github.com/jle4alika/my-fastapi-base-architecture/blob/main/CHANGELOG.md"
+Changelog = "https://github.com/jle4alika/my-fastapi-base-architecture/blob/main/backend/CHANGELOG.md"
 
 [tool.poetry]
 packages = [
@@ -71,9 +72,9 @@ packages = [
     { include = "presentation", from = "backend/api" },
 ]
 exclude = [
-    "backend/deploy",
-    "backend/tests",
-    "backend/**/__pycache__",
+    "deploy",
+    "tests",
+    "**/__pycache__",
 ]
 
 [tool.poetry.group.dev.dependencies]
@@ -88,8 +89,8 @@ import-linter = ">=2.1"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-pythonpath = ["backend", "backend/api"]
-testpaths = ["backend/tests"]
+pythonpath = [".", "backend/api"]
+testpaths = ["tests"]
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]

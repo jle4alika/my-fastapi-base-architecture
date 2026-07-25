@@ -1,6 +1,6 @@
 # Prod: полный стек
 #
-#   docker compose --env-file backend/.env -f backend/deploy/compose.prod.yml up --build -d
+#   docker compose --env-file .env -f deploy/compose.prod.yml up --build -d
 #
 # Публично ТОЛЬКО nginx :80
 #   API          → http://host/

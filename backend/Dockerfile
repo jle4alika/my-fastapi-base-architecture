@@ -1,5 +1,5 @@
-# Build context = корень репозитория (см. deploy/services/app.yml).
-# Зависимости — Poetry; пакеты: backend + common/core/domains.
+# Build context = корень шаблона (эта папка).
+# Зависимости — Poetry; пакеты: backend + common/core/domains/…
 
 FROM python:3.12-slim-bookworm AS builder
 

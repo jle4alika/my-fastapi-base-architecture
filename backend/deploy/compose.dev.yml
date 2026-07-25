@@ -1,6 +1,6 @@
 # Dev: полный стек (infra + api + nginx + monitoring)
 #
-#   docker compose --env-file backend/.env -f backend/deploy/compose.dev.yml up --build -d
+#   docker compose --env-file .env -f deploy/compose.dev.yml up --build -d
 #
 # Публично ТОЛЬКО nginx :80
 #   API / docs   → http://localhost/
@@ -62,21 +62,21 @@ services:
       --reload
       --proxy-headers --forwarded-allow-ips="*"
     volumes:
-      # только backend/ → /app/backend (не весь репо — иначе /app/backend/backend/…)
-      - ../../backend:/app/backend
+      # Python-пакет backend/ → /app/backend
+      - ../backend:/app/backend
 
   consumers:
     environment:
       <<: *app-env
     volumes:
-      - ../../backend:/app/backend
+      - ../backend:/app/backend
 
   celery_worker:
     # профиль celery задан в services/app.yml
     environment:
       <<: *app-env
     volumes:
-      - ../../backend:/app/backend
+      - ../backend:/app/backend
 
   nginx:
     volumes:

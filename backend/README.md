@@ -1,16 +1,28 @@
 # FastAPI Architecture Template
 
 Шаблон backend API: **FastAPI**, **fastapi-users**, **SQLAlchemy 2 async**, **Redis**, **RabbitMQ**, **Celery**.  
-Зависимости — **Poetry**.
+Зависимости — **Poetry**. Всё нужное для поднятия бека — **в этой папке**.
 
-> **Новые ручки / домен:** читай [`docs/ADDING_A_FEATURE.md`](../docs/ADDING_A_FEATURE.md)  
-> Кратко по слоям: [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md)  
-> Эталон в коде: `domains/users` + `presentation/v1/users`
+> **Новые ручки / домен:** [`docs/ADDING_A_FEATURE.md`](docs/ADDING_A_FEATURE.md)  
+> Кратко по слоям: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)  
+> Эталон в коде: `backend/api/domains/users` + `backend/api/presentation/v1/users`
 
-## Установка
+## Как использовать в своём сервисе
+
+Скопируй эту папку (`backend/`) в репозиторий сервиса и работай из неё:
 
 ```bash
-cp backend/.env.example backend/.env
+cd backend
+cp .env.example .env
+poetry install          # или: make install-dev
+make infra && make migrate
+poetry run uvicorn backend.api.app:app --reload --port 8000
+```
+
+## Установка (в этой папке)
+
+```bash
+cp .env.example .env
 poetry install          # или: make install-dev
 ```
 
@@ -62,7 +74,7 @@ Auth fastapi-users — отдельные `*Create/*Update/*Read` в infrastruct
 ```bash
 make up-dev              # без Celery
 make up-dev-celery       # + celery_worker + celery_exporter
-# или в backend/.env: COMPOSE_PROFILES=celery
+# или в .env: COMPOSE_PROFILES=celery
 
 make celery-worker       # локальный worker на хосте
 ```
@@ -77,16 +89,14 @@ ping.delay()
 ## Структура
 
 ```
-backend/api/
-  app.py
-  presentation/v1/     # HTTP, версия API
-  domains/<feature>/   # domain | application | infrastructure
-  infrastructure/      # postgres, redis, rabbit, celery, smtp, cache
-  common/              # errors, BaseDTO
-  core/                # config, logging
-docs/
-  ADDING_A_FEATURE.md  # ← главный гайд для новых ручек
-  ARCHITECTURE.md
+.                      # корень шаблона (эта папка)
+  pyproject.toml       # Poetry
+  Makefile
+  docs/
+  backend/api/         # Python-пакет: presentation, domains, infrastructure…
+  alembic/
+  deploy/
+  tests/
 ```
 
 ## Тесты и качество

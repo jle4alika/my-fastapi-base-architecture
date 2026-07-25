@@ -6,8 +6,8 @@
 services:
   api:
     build:
-      context: ../../..
-      dockerfile: backend/Dockerfile
+      context: ../..
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - ../../.env
@@ -38,8 +38,8 @@ services:
 
   consumers:
     build:
-      context: ../../..
-      dockerfile: backend/Dockerfile
+      context: ../..
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - ../../.env
@@ -56,8 +56,8 @@ services:
   celery_worker:
     profiles: ["celery"]
     build:
-      context: ../../..
-      dockerfile: backend/Dockerfile
+      context: ../..
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - ../../.env

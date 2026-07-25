@@ -1,4 +1,4 @@
-# Контекст сборки — корень репозитория.
+# Контекст сборки — корень шаблона (эта папка).
 .git
 .idea
 .venv
@@ -8,9 +8,9 @@
 **/.mypy_cache
 **/.ruff_cache
 **/*.md
-backend/.env
-backend/.env.*
-backend/deploy
+.env
+.env.*
+deploy
 uploads
 *.sqlite
 *.sqlite3

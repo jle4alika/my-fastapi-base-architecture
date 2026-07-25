@@ -1,12 +1,12 @@
-# Запуск из корня репозитория (Poetry)
+# Запуск из корня шаблона (эта папка = backend/)
 
 REPO_ROOT := $(abspath .)
 POETRY := poetry
-ENV_FILE := --env-file backend/.env
+ENV_FILE := --env-file .env
 
-COMPOSE_INFRA := docker compose $(ENV_FILE) -f backend/deploy/compose.infra.yml
-COMPOSE_DEV := docker compose $(ENV_FILE) -f backend/deploy/compose.dev.yml
-COMPOSE_PROD := docker compose $(ENV_FILE) -f backend/deploy/compose.prod.yml
+COMPOSE_INFRA := docker compose $(ENV_FILE) -f deploy/compose.infra.yml
+COMPOSE_DEV := docker compose $(ENV_FILE) -f deploy/compose.dev.yml
+COMPOSE_PROD := docker compose $(ENV_FILE) -f deploy/compose.prod.yml
 
 .PHONY: install install-dev infra infra-down up up-dev up-dev-celery up-prod up-prod-celery \
 	down down-dev down-prod logs migrate revision migrate-down current celery-worker lint format test
@@ -53,26 +53,26 @@ logs:
 
 # --- Миграции / Celery / тесты на хосте ---
 migrate:
-	cd $(REPO_ROOT) && $(POETRY) run alembic -c backend/alembic.ini upgrade head
+	cd $(REPO_ROOT) && $(POETRY) run alembic -c alembic.ini upgrade head
 
 revision:
-	cd $(REPO_ROOT) && $(POETRY) run alembic -c backend/alembic.ini revision --autogenerate -m "$(msg)"
+	cd $(REPO_ROOT) && $(POETRY) run alembic -c alembic.ini revision --autogenerate -m "$(msg)"
 
 migrate-down:
-	cd $(REPO_ROOT) && $(POETRY) run alembic -c backend/alembic.ini downgrade -1
+	cd $(REPO_ROOT) && $(POETRY) run alembic -c alembic.ini downgrade -1
 
 current:
-	cd $(REPO_ROOT) && $(POETRY) run alembic -c backend/alembic.ini current
+	cd $(REPO_ROOT) && $(POETRY) run alembic -c alembic.ini current
 
 celery-worker:
 	cd $(REPO_ROOT) && $(POETRY) run celery -A infrastructure.celery_workers.celery_app:celery_app worker --loglevel=INFO -E
 
 lint:
-	$(POETRY) run black --check backend/api backend/tests
+	$(POETRY) run black --check backend/api tests
 	$(POETRY) run lint-imports
 
 format:
-	$(POETRY) run black backend/api backend/tests
+	$(POETRY) run black backend/api tests
 
 test:
 	$(POETRY) run pytest -q --cov=domains --cov=common --cov-report=term-missing

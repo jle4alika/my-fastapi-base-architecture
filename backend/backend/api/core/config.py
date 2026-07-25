@@ -11,15 +11,15 @@ from urllib.parse import quote_plus
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_ROOT = Path(__file__).resolve().parent.parent
+_TEMPLATE_ROOT = Path(__file__).resolve().parents[3]
 
 _DEFAULT_JWT_SECRET = "CHANGE_ME_IN_PRODUCTION_USE_LONG_SECRET"
 
 
 def _env_files() -> tuple[str, ...]:
-    """backend/.env и при необходимости .env в корне репозитория."""
-    paths = (_ROOT / ".env", _ROOT.parent / ".env")
-    return tuple(str(p) for p in paths if p.is_file())
+    """`.env` в корне шаблона (рядом с pyproject.toml)."""
+    path = _TEMPLATE_ROOT / ".env"
+    return (str(path),) if path.is_file() else ()
 
 
 _ENV_FILE_KWARGS = {

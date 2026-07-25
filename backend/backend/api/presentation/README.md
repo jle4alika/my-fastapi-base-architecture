@@ -7,4 +7,4 @@
 
 Бизнес-логику сюда не класть — только вызов application-service и `response_model`.
 
-Гайд: [`../../../docs/ADDING_A_FEATURE.md`](../../../docs/ADDING_A_FEATURE.md)
+Гайд: [`../../../../docs/ADDING_A_FEATURE.md`](../../../../docs/ADDING_A_FEATURE.md)

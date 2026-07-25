@@ -1,3 +1,0 @@
-# Prod stack → backend/deploy/compose.prod.yml
-include:
-  - path: backend/deploy/compose.prod.yml
