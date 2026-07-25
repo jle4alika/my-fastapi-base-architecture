@@ -48,8 +48,6 @@ def upgrade() -> None:
     op.create_table(
         "users",
         sa.Column("username", sa.String(), nullable=False),
-        sa.Column("birthday", sa.String(), nullable=False),
-        sa.Column("description", sa.String(), nullable=True),
         sa.Column(
             "id",
             postgresql.UUID(as_uuid=True),
