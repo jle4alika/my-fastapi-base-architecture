@@ -152,9 +152,9 @@ tests/api/test_notes.py                       # override get_note_service
 ```bash
 # из корня, подставь NAME=notes
 NAME=notes
-BASE=backend/api/domains/$NAME
+BASE=api/domains/$NAME
 mkdir -p $BASE/{domain,application,infrastructure}
-mkdir -p backend/api/presentation/v1/$NAME
+mkdir -p api/presentation/v1/$NAME
 # дальше скопируй/адаптируй файлы из domains/users и presentation/v1/users
 ```
 

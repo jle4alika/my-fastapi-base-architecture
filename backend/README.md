@@ -5,7 +5,7 @@
 
 > **Новые ручки / домен:** [`docs/ADDING_A_FEATURE.md`](docs/ADDING_A_FEATURE.md)  
 > Кратко по слоям: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)  
-> Эталон в коде: `backend/api/domains/users` + `backend/api/presentation/v1/users`
+> Эталон в коде: `api/domains/users` + `api/presentation/v1/users`
 
 ## Как использовать в своём сервисе
 
@@ -16,7 +16,7 @@ cd backend
 cp .env.example .env
 poetry install          # или: make install-dev
 make infra && make migrate
-poetry run uvicorn backend.api.app:app --reload --port 8000
+poetry run uvicorn api.app:app --reload --port 8000
 ```
 
 ## Установка (в этой папке)
@@ -26,14 +26,14 @@ cp .env.example .env
 poetry install          # или: make install-dev
 ```
 
-Импорты `backend.api…`, `common…`, `core…`, `domains…`, `infrastructure…`, `presentation…` работают через Poetry-пакеты.
+Импорты `api…`, `common…`, `core…`, `domains…`, `infrastructure…`, `presentation…` работают через Poetry-пакеты.
 
 ## Быстрый старт
 
 ```bash
 make infra
 make migrate
-poetry run uvicorn backend.api.app:app --reload --port 8000
+poetry run uvicorn api.app:app --reload --port 8000
 ```
 
 ## Как спроектировать новую фичу (кратко)
@@ -93,7 +93,7 @@ ping.delay()
   pyproject.toml       # Poetry
   Makefile
   docs/
-  backend/api/         # Python-пакет: presentation, domains, infrastructure…
+  api/         # Python-пакет: presentation, domains, infrastructure…
   alembic/
   deploy/
   tests/

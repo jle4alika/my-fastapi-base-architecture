@@ -30,7 +30,7 @@ x-app-env: &app-env
   ENVIRONMENT: development
   TRUST_PROXY_HEADERS: "true"
   # Hot-reload: common/core/domains с хоста (site-packages из образа иначе stale)
-  PYTHONPATH: /app:/app/backend/api
+  PYTHONPATH: /app:/app/api
 
 services:
   db:
@@ -57,26 +57,25 @@ services:
     environment:
       <<: *app-env
     command: >
-      uvicorn backend.api.app:app
+      uvicorn api.app:app
       --host 0.0.0.0 --port 8000
       --reload
       --proxy-headers --forwarded-allow-ips="*"
     volumes:
-      # Python-пакет backend/ → /app/backend
-      - ../backend:/app/backend
+      - ../api:/app/api
 
   consumers:
     environment:
       <<: *app-env
     volumes:
-      - ../backend:/app/backend
+      - ../api:/app/api
 
   celery_worker:
     # профиль celery задан в services/app.yml
     environment:
       <<: *app-env
     volumes:
-      - ../backend:/app/backend
+      - ../api:/app/api
 
   nginx:
     volumes:

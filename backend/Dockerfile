@@ -1,5 +1,5 @@
 # Build context = корень шаблона (эта папка).
-# Зависимости — Poetry; пакеты: backend + common/core/domains/…
+# Зависимости — Poetry; пакеты: api + common/core/domains/…
 
 FROM python:3.12-slim-bookworm AS builder
 
@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir "poetry==${POETRY_VERSION}"
 WORKDIR /app
 
 COPY pyproject.toml poetry.lock ./
-COPY backend ./backend
+COPY api ./api
 
 RUN poetry install --only main --no-ansi --no-root \
     && poetry install --only main --no-ansi \
@@ -32,8 +32,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
-COPY backend ./backend
+COPY api ./api
 
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]
+CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]

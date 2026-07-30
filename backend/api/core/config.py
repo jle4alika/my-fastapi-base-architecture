@@ -11,7 +11,8 @@ from urllib.parse import quote_plus
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_TEMPLATE_ROOT = Path(__file__).resolve().parents[3]
+# api/core/config.py → parents[2] = корень шаблона (рядом с pyproject.toml)
+_TEMPLATE_ROOT = Path(__file__).resolve().parents[2]
 
 _DEFAULT_JWT_SECRET = "CHANGE_ME_IN_PRODUCTION_USE_LONG_SECRET"
 

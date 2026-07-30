@@ -2,7 +2,7 @@
 Точка входа: запуск всех RabbitMQ-консьюмеров сообщений.
 
 Пример:
-  PYTHONPATH=.:backend/api python -m infrastructure.rabbitmq.run_all_consumers
+  PYTHONPATH=.:api python -m infrastructure.rabbitmq.run_all_consumers
 """
 
 from __future__ import annotations

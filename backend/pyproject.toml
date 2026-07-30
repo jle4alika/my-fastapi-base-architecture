@@ -64,12 +64,12 @@ Changelog = "https://github.com/jle4alika/my-fastapi-base-architecture/blob/main
 
 [tool.poetry]
 packages = [
-    { include = "backend" },
-    { include = "common", from = "backend/api" },
-    { include = "core", from = "backend/api" },
-    { include = "domains", from = "backend/api" },
-    { include = "infrastructure", from = "backend/api" },
-    { include = "presentation", from = "backend/api" },
+    { include = "api" },
+    { include = "common", from = "api" },
+    { include = "core", from = "api" },
+    { include = "domains", from = "api" },
+    { include = "infrastructure", from = "api" },
+    { include = "presentation", from = "api" },
 ]
 exclude = [
     "deploy",
@@ -89,7 +89,7 @@ import-linter = ">=2.1"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-pythonpath = [".", "backend/api"]
+pythonpath = [".", "api"]
 testpaths = ["tests"]
 filterwarnings = [
     "ignore::DeprecationWarning",

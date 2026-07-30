@@ -13,7 +13,7 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 from httpx import ASGITransport, AsyncClient
 
-from backend.api.app import app as fastapi_app
+from api.app import app as fastapi_app
 from domains.users.application.ports import AbstractUserUnitOfWork
 from domains.users.application.service import UserService
 from domains.users.domain.entities import User

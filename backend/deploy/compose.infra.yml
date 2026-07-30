@@ -1,7 +1,7 @@
 # Только инфраструктура — для локального uvicorn / pytest на хосте.
 #
 #   make infra
-#   poetry run uvicorn backend.api.app:app --reload --port 8000
+#   poetry run uvicorn api.app:app --reload --port 8000
 #
 # Порты только на 127.0.0.1 (не доступны из LAN/интернета).
 

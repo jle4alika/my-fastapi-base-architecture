@@ -68,11 +68,11 @@ celery-worker:
 	cd $(REPO_ROOT) && $(POETRY) run celery -A infrastructure.celery_workers.celery_app:celery_app worker --loglevel=INFO -E
 
 lint:
-	$(POETRY) run black --check backend/api tests
+	$(POETRY) run black --check api tests
 	$(POETRY) run lint-imports
 
 format:
-	$(POETRY) run black backend/api tests
+	$(POETRY) run black api tests
 
 test:
 	$(POETRY) run pytest -q --cov=domains --cov=common --cov-report=term-missing
